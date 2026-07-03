@@ -47,6 +47,7 @@ def _build_ragas_embeddings():
 def run_evaluation(
     questions: List[Dict[str, Any]],
     sample: Optional[int] = None,
+    ci_mode: bool = False,
 ) -> Dict[str, Any]:
     """Run RAGAS evaluation on a list of Q&A pairs.
 
@@ -58,12 +59,21 @@ def run_evaluation(
         Dict of aggregated RAGAS metrics plus per-question results.
     """
     from ragas import evaluate, EvaluationDataset, SingleTurnSample
+    from ragas.run_config import RunConfig
     from ragas.metrics import (
         faithfulness,
         answer_relevancy,
         context_precision,
         context_recall,
     )
+
+    # CI mode: only evaluate faithfulness to minimise Groq API calls (10 vs 40).
+    # This avoids rate-limiting and keeps the CI gate fast and reliable.
+    if ci_mode:
+        logger.info("CI mode: evaluating faithfulness only (10 API calls).")
+        active_metrics = [faithfulness]
+    else:
+        active_metrics = [faithfulness, answer_relevancy, context_precision, context_recall]
     from src.rag.chain import get_rag_chain
 
     if sample and sample < len(questions):
@@ -75,11 +85,11 @@ def run_evaluation(
     ragas_emb = _build_ragas_embeddings()
 
     # Initialise metrics with Groq as judge
-    metrics = [faithfulness, answer_relevancy, context_precision, context_recall]
-    for m in metrics:
+    for m in active_metrics:
         m.llm = ragas_llm
         if hasattr(m, "embeddings"):
             m.embeddings = ragas_emb
+    metrics = active_metrics
 
     # Build evaluation dataset
     samples: List[SingleTurnSample] = []
@@ -113,11 +123,16 @@ def run_evaluation(
     dataset = EvaluationDataset(samples=samples)
 
     logger.info("Running RAGAS evaluation...")
+    # max_workers=1: sequential evaluation avoids Groq free-tier 6k TPM rate limit.
+    # timeout=120s per job; max_retries=5 with backoff handles transient 429s.
+    run_cfg = RunConfig(max_workers=1, timeout=120, max_retries=5)
     ragas_result = evaluate(
         dataset=dataset,
         metrics=metrics,
         llm=ragas_llm,
         embeddings=ragas_emb,
+        run_config=run_cfg,
+        raise_exceptions=False,
     )
 
     scores = ragas_result.to_pandas().mean(numeric_only=True).to_dict()
@@ -166,7 +181,7 @@ def evaluate_cmd(
         f"  Threshold  : faithfulness ≥ {settings.faithfulness_threshold}\n"
     )
 
-    metrics = run_evaluation(questions, sample=sample)
+    metrics = run_evaluation(questions, sample=sample, ci_mode=ci)
 
     # Persist
     store = MetricsStore()

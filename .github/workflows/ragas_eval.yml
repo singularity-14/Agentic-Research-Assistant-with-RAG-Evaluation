@@ -25,6 +25,24 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Validate required secrets
+        run: |
+          if [ -z "$GROQ_API_KEY" ]; then
+            echo "❌ ERROR: GROQ_API_KEY secret is not set!"
+            echo "Go to: Settings → Secrets and variables → Actions → New repository secret"
+            echo "Add secret name: GROQ_API_KEY with your Groq API key from https://console.groq.com"
+            exit 1
+          fi
+          echo "✅ GROQ_API_KEY is present."
+          if [ -z "$LANGSMITH_API_KEY" ]; then
+            echo "⚠️  LANGSMITH_API_KEY not set — LangSmith tracing will be disabled."
+          else
+            echo "✅ LANGSMITH_API_KEY is present — tracing enabled."
+          fi
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
+
       - name: Restore FAISS index cache
         uses: actions/cache@v4
         with:
@@ -37,7 +55,7 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
           LANGSMITH_PROJECT: cern-knowledge-navigator-ci
-          LANGSMITH_TRACING: "true"
+          LANGSMITH_TRACING: ${{ secrets.LANGSMITH_API_KEY != '' && 'true' || 'false' }}
           LANGSMITH_ENDPOINT: https://api.smith.langchain.com
         run: |
           if [ ! -f "data/faiss_index/cern_papers.faiss" ]; then
@@ -53,7 +71,7 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
           LANGSMITH_PROJECT: cern-knowledge-navigator-ci
-          LANGSMITH_TRACING: "true"
+          LANGSMITH_TRACING: ${{ secrets.LANGSMITH_API_KEY != '' && 'true' || 'false' }}
           LANGSMITH_ENDPOINT: https://api.smith.langchain.com
           FAITHFULNESS_THRESHOLD: "0.8"
         run: |
