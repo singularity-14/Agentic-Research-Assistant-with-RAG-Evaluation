@@ -21,6 +21,18 @@ from src.config import settings
 BGE_QUERY_INSTRUCTION = "Represent this sentence for searching relevant passages: "
 
 
+class BGEHuggingFaceEmbeddings(HuggingFaceEmbeddings):
+    """HuggingFaceEmbeddings subclass that prepends an instruction to queries."""
+
+    query_instruction: str = ""
+
+    def embed_query(self, text: str) -> List[float]:
+        """Compute query embeddings, prepending query_instruction."""
+        if self.query_instruction:
+            text = f"{self.query_instruction}{text}"
+        return super().embed_query(text)
+
+
 @lru_cache(maxsize=1)
 def get_embeddings() -> HuggingFaceEmbeddings:
     """Return a cached singleton embedding model instance.
@@ -36,7 +48,7 @@ def get_embeddings() -> HuggingFaceEmbeddings:
         f"(device={settings.embedding_device})"
     )
 
-    embeddings = HuggingFaceEmbeddings(
+    embeddings = BGEHuggingFaceEmbeddings(
         model_name=settings.embedding_model,
         model_kwargs={"device": settings.embedding_device},
         encode_kwargs={
