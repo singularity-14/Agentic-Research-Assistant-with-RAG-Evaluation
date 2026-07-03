@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "cern-knowledge-navigator"
+version = "1.0.0"
+description = "Production RAG system over CERN/HEP scientific papers with MCP server and RAGAS evaluation"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Your Name", email = "you@example.com" }]
+keywords = ["rag", "llm", "mcp", "physics", "cern", "langchain", "faiss"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "langchain>=0.3.25",
+    "langchain-core>=0.3.63",
+    "langchain-community>=0.3.24",
+    "langchain-groq>=0.3.2",
+    "langchain-huggingface>=0.1.2",
+    "groq>=0.28.0",
+    "sentence-transformers>=3.4.1",
+    "faiss-cpu>=1.10.0",
+    "rank-bm25>=0.2.2",
+    "fastmcp>=2.5.2",
+    "fastapi>=0.115.12",
+    "uvicorn[standard]>=0.34.3",
+    "arxiv>=2.2.0",
+    "pymupdf>=1.25.5",
+    "ragas>=0.2.15",
+    "streamlit>=1.45.1",
+    "plotly>=6.1.2",
+    "pandas>=2.2.3",
+    "langsmith>=0.3.45",
+    "pydantic>=2.11.5",
+    "pydantic-settings>=2.9.1",
+    "python-dotenv>=1.1.0",
+    "rich>=14.0.0",
+    "typer>=0.15.4",
+    "loguru>=0.7.3",
+    "SQLAlchemy>=2.0.41",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.4.0",
+    "pytest-asyncio>=1.0.0",
+    "pytest-mock>=3.14.1",
+    "ruff>=0.9.0",
+    "mypy>=1.15.0",
+]
+
+[project.scripts]
+cern-ingest   = "src.ingestion.pipeline:app"
+cern-api      = "src.api.main:run"
+cern-mcp      = "src.mcp_server.server:run"
+cern-eval     = "src.evaluation.ragas_runner:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"]

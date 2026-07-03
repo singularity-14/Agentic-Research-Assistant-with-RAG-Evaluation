@@ -1,0 +1,89 @@
+name: RAGAS Evaluation CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main]
+
+jobs:
+  ragas-eval:
+    name: RAGAS Faithfulness Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Restore FAISS index cache
+        uses: actions/cache@v4
+        with:
+          path: data/faiss_index
+          key: faiss-index-${{ hashFiles('data/raw/papers.jsonl') }}
+          restore-keys: faiss-index-
+
+      - name: Build index if missing
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
+          LANGSMITH_PROJECT: cern-knowledge-navigator-ci
+          LANGSMITH_TRACING: "true"
+          LANGSMITH_ENDPOINT: https://api.smith.langchain.com
+        run: |
+          if [ ! -f "data/faiss_index/cern_papers.faiss" ]; then
+            echo "Building FAISS index (first run)..."
+            python -m src.ingestion.pipeline --max-results 50 --skip-fetch
+          else
+            echo "FAISS index found — skipping ingestion."
+          fi
+
+      - name: Run RAGAS evaluation (CI subset — 10 questions)
+        id: ragas
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
+          LANGSMITH_PROJECT: cern-knowledge-navigator-ci
+          LANGSMITH_TRACING: "true"
+          LANGSMITH_ENDPOINT: https://api.smith.langchain.com
+          FAITHFULNESS_THRESHOLD: "0.8"
+        run: |
+          python -m src.evaluation.ragas_runner --sample 10 --ci
+        # --ci flag exits with code 1 if faithfulness < FAITHFULNESS_THRESHOLD
+
+      - name: Upload evaluation results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ragas-results-${{ github.run_number }}
+          path: data/evaluation/results/
+          retention-days: 30
+
+      - name: Comment PR with results
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request' && always()
+        with:
+          script: |
+            const fs = require('fs');
+            const outcome = '${{ steps.ragas.outcome }}';
+            const icon = outcome === 'success' ? '✅' : '❌';
+            const body = `## ${icon} RAGAS Evaluation — ${outcome.toUpperCase()}\n\n` +
+              `| Metric | Status |\n|---|---|\n` +
+              `| Faithfulness ≥ 0.8 | ${outcome === 'success' ? '✓ PASS' : '✗ FAIL'} |\n\n` +
+              `See the **Actions** tab for detailed scores.\n` +
+              `Evaluation artifacts available for 30 days.`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });

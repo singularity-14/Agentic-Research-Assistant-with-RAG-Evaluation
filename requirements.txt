@@ -1,0 +1,72 @@
+# ============================================================
+# CERN Knowledge Navigator — Python Dependencies
+# ============================================================
+
+# ── Core LangChain ───────────────────────────────────────────
+langchain==0.3.25
+langchain-core==0.3.63
+langchain-community==0.3.24
+langchain-groq==0.3.2
+langchain-huggingface==0.1.2
+
+# ── LLM / Groq ───────────────────────────────────────────────
+groq==0.28.0
+
+# ── Embeddings / HuggingFace ─────────────────────────────────
+sentence-transformers==3.4.1
+transformers==4.51.3
+torch==2.6.0
+tokenizers>=0.19.0
+
+# ── Vector Store ─────────────────────────────────────────────
+faiss-cpu==1.10.0
+
+# ── Hybrid Search ────────────────────────────────────────────
+rank-bm25==0.2.2
+
+# ── MCP Server ───────────────────────────────────────────────
+fastmcp==2.5.2
+mcp==1.9.4
+
+# ── FastAPI ──────────────────────────────────────────────────
+fastapi==0.115.12
+uvicorn[standard]==0.34.3
+python-multipart==0.0.20
+
+# ── Data Ingestion ───────────────────────────────────────────
+arxiv==2.2.0
+pymupdf==1.25.5
+httpx==0.28.1
+aiofiles==24.1.0
+
+# ── Document Processing ──────────────────────────────────────
+tiktoken==0.9.0
+
+# ── Evaluation (RAGAS) ───────────────────────────────────────
+ragas==0.2.15
+datasets==3.6.0
+
+# ── Streamlit Dashboard ──────────────────────────────────────
+streamlit==1.45.1
+plotly==6.1.2
+pandas==2.2.3
+
+# ── Observability ────────────────────────────────────────────
+langsmith==0.3.45
+
+# ── Config & Utilities ───────────────────────────────────────
+pydantic==2.11.5
+pydantic-settings==2.9.1
+python-dotenv==1.1.0
+rich==14.0.0
+typer==0.15.4
+loguru==0.7.3
+
+# ── Storage ──────────────────────────────────────────────────
+SQLAlchemy==2.0.41
+
+# ── Testing ──────────────────────────────────────────────────
+pytest==8.4.0
+pytest-asyncio==1.0.0
+pytest-mock==3.14.1
+httpx==0.28.1

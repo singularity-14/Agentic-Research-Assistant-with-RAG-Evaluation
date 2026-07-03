@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+.env.local
+
+# Secrets (keep .env.example but never .env itself)
+.env
+
+# Data (large files — use DVC or similar for versioning)
+data/raw/
+data/processed/
+data/faiss_index/
+
+# Evaluation results (committed selectively)
+data/evaluation/results/*.db
+
+# Notebooks checkpoints
+.ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
+
+# HuggingFace model cache
+.cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# pytest
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# mypy / ruff
+.mypy_cache/
+.ruff_cache/

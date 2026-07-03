@@ -1,0 +1,39 @@
+# Exclude virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Exclude local configuration and secrets
+.env
+.env.local
+
+# Exclude git repository data and configuration
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# Exclude build and distribution artifacts
+build/
+dist/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Exclude local data, indexes, and caches
+data/
+.cache/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Exclude documentation files and developer notes
+README.md
+notebooks/
+tests/
+docker-compose.yml
+Dockerfile
+.dockerignore

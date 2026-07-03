@@ -1,0 +1,66 @@
+version: "3.9"
+
+services:
+  # ── FastAPI + MCP REST Service ──────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: cern-api
+    ports:
+      - "8000:8000"
+    env_file: .env
+    volumes:
+      - ./data:/app/data          # persist FAISS index and raw data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - cern-net
+
+  # ── MCP Server (HTTP/SSE mode) ───────────────────────────────────────────────
+  mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: cern-mcp
+    command: ["python", "-m", "src.mcp_server.server", "--http"]
+    ports:
+      - "8001:8001"
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - cern-net
+
+  # ── RAGAS Evaluation Dashboard ───────────────────────────────────────────────
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: cern-dashboard
+    command: ["streamlit", "run", "src/evaluation/dashboard.py",
+              "--server.port=8501", "--server.address=0.0.0.0",
+              "--server.headless=true"]
+    ports:
+      - "8501:8501"
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    networks:
+      - cern-net
+
+networks:
+  cern-net:
+    driver: bridge
