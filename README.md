@@ -130,8 +130,8 @@ pip or uv
 ### 2. Clone & Install
 
 ```bash
-git clone https://github.com/your-username/cern-knowledge-navigator.git
-cd cern-knowledge-navigator
+git clone https://github.com/singularity-14/Agentic-Research-Assistant-with-RAG-Evaluation.git
+cd Agentic-Research-Assistant-with-RAG-Evaluation
 
 # Create virtual environment
 python -m venv .venv
