@@ -48,7 +48,7 @@ CERN Public Docs (arXiv: hep-ex, hep-ph, physics.acc-ph)
   │  @prompt: physics_qa_template              │
   └────────────────────────────────────────────┘
         ↓
-  LangChain RAG Chain  (Groq llama-3.3-70b-versatile)
+  LangChain RAG Chain  (NVIDIA mistral-medium-3.5-128b)
   LangSmith Tracing    (observability)
         ↓
   FastAPI REST API  (:8000)
@@ -95,7 +95,7 @@ cern-knowledge-navigator/
 │   │   └── models.py                   # Pydantic request/response schemas
 │   └── evaluation/
 │       ├── golden_dataset.py           # 50 curated HEP Q&A pairs
-│       ├── ragas_runner.py             # RAGAS evaluate() with Groq judge
+│       ├── ragas_runner.py             # RAGAS evaluate() with NVIDIA judge
 │       ├── metrics_store.py            # SQLite persistence for scores
 │       └── dashboard.py               # Streamlit evaluation dashboard
 │
@@ -155,6 +155,7 @@ Edit `.env`:
 
 ```env
 # Required
+NVIDIA_GLM_API_KEY=your_nvidia_api_key_here
 GROQ_API_KEY=gsk_your_key_here
 LANGSMITH_API_KEY=lsv2_your_key_here
 LANGSMITH_PROJECT=cern-knowledge-navigator
@@ -324,7 +325,7 @@ Add to `.cursor/mcp.json` in your project:
 Run evaluation against the 50-question golden dataset:
 
 ```bash
-# Full evaluation (50 questions, ~15-20 min with Groq rate limits)
+# Full evaluation (50 questions, ~15-20 min with NVIDIA rate limits)
 python -m src.evaluation.ragas_runner
 
 # Quick CI subset (2 questions, ~1 min)
@@ -343,7 +344,7 @@ python -m src.evaluation.ragas_runner --sample 2 --ci
 | **Context Precision** | Are retrieved chunks actually relevant? | ≥ 0.70 |
 | **Context Recall** | Does context contain necessary information? | ≥ 0.70 |
 
-> **Judge LLM**: `llama-3.1-8b-instant` via Groq (free tier, fast inference)
+> **Judge LLM**: `mistral-medium-3.5-128b` via NVIDIA
 
 ---
 
@@ -368,7 +369,8 @@ Add to `Settings → Secrets → Actions`:
 
 | Secret | Value |
 |---|---|
-| `GROQ_API_KEY` | Your Groq API key |
+| `NVIDIA_GLM_API_KEY` | Your NVIDIA API key |
+| `GROQ_API_KEY` | Your Groq API key (if falling back to Groq) |
 | `LANGSMITH_API_KEY` | Your LangSmith API key |
 
 ---
@@ -392,9 +394,10 @@ All settings are loaded from `.env` via `src/config.py` (Pydantic `BaseSettings`
 
 | Variable | Default | Description |
 |---|---|---|
-| `GROQ_API_KEY` | — | **Required.** Groq API key |
-| `GROQ_MODEL` | `llama-3.3-70b-versatile` | Generation LLM |
-| `GROQ_JUDGE_MODEL` | `llama-3.1-8b-instant` | RAGAS judge LLM |
+| `NVIDIA_GLM_API_KEY` | — | NVIDIA API key for generation and judging |
+| `GROQ_API_KEY` | — | Groq API key (fallback) |
+| `GROQ_MODEL` | `llama-3.3-70b-versatile` | Generation LLM (if using Groq) |
+| `GROQ_JUDGE_MODEL` | `llama-3.1-8b-instant` | RAGAS judge LLM (if using Groq) |
 | `LANGSMITH_API_KEY` | — | LangSmith observability |
 | `LANGSMITH_PROJECT` | `cern-knowledge-navigator` | LangSmith project name |
 | `LANGSMITH_TRACING` | `true` | Enable LangSmith tracing |
@@ -413,8 +416,8 @@ All settings are loaded from `.env` via `src/config.py` (Pydantic `BaseSettings`
 
 | Component | Technology |
 |---|---|
-| **LLM (generation)** | Groq `llama-3.3-70b-versatile` |
-| **RAGAS judge** | Groq `llama-3.1-8b-instant` |
+| **LLM (generation)** | NVIDIA `mistral-medium-3.5-128b` |
+| **RAGAS judge** | NVIDIA `mistral-medium-3.5-128b` |
 | **Embeddings** | `BAAI/bge-small-en-v1.5` (local) |
 | **Cross-encoder reranker** | `ms-marco-MiniLM-L-6-v2` (local) |
 | **Vector store** | FAISS (local) |
