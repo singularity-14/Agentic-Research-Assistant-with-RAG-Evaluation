@@ -67,7 +67,7 @@ cern-knowledge-navigator/
 ├── .gitignore
 ├── .github/
 │   └── workflows/
-│       └── ragas_eval.yml              # CI: fails PR if faithfulness < 0.8
+│       └── ragas_eval.yml              # CI: Manually triggered (workflow_dispatch)
 ├── Dockerfile                          # Multi-stage, non-root runtime
 ├── docker-compose.yml                  # API + MCP + Dashboard services
 ├── pyproject.toml                      # Project metadata & entry points
