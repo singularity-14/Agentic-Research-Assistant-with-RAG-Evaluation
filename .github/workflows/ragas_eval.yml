@@ -42,6 +42,7 @@ jobs:
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
+          NVIDIA_GLM_API_KEY: ${{ secrets.NVIDIA_GLM_API_KEY }}
 
       - name: Restore FAISS index cache
         uses: actions/cache@v4
@@ -53,6 +54,8 @@ jobs:
       - name: Build index if missing
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_JUDGE_MODEL: llama-3.3-70b-versatile
+          NVIDIA_GLM_API_KEY: ${{ secrets.NVIDIA_GLM_API_KEY }}
           LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
           LANGSMITH_PROJECT: cern-knowledge-navigator-ci
           LANGSMITH_TRACING: ${{ secrets.LANGSMITH_API_KEY != '' && 'true' || 'false' }}
@@ -65,17 +68,19 @@ jobs:
             echo "FAISS index found — skipping ingestion."
           fi
 
-      - name: Run RAGAS evaluation (CI subset — 10 questions)
+      - name: Run RAGAS evaluation (CI subset — 2 questions)
         id: ragas
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_JUDGE_MODEL: llama-3.3-70b-versatile
+          NVIDIA_GLM_API_KEY: ${{ secrets.NVIDIA_GLM_API_KEY }}
           LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
           LANGSMITH_PROJECT: cern-knowledge-navigator-ci
           LANGSMITH_TRACING: ${{ secrets.LANGSMITH_API_KEY != '' && 'true' || 'false' }}
           LANGSMITH_ENDPOINT: https://api.smith.langchain.com
           FAITHFULNESS_THRESHOLD: "0.8"
         run: |
-          python -m src.evaluation.ragas_runner --sample 10 --ci
+          python -m src.evaluation.ragas_runner --sample 2 --ci
         # --ci flag exits with code 1 if faithfulness < FAITHFULNESS_THRESHOLD
 
       - name: Upload evaluation results

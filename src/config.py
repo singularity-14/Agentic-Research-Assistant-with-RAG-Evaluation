@@ -46,6 +46,18 @@ class Settings(BaseSettings):
         default="llama-3.1-8b-instant", alias="GROQ_JUDGE_MODEL"
     )
 
+    # ── Gemini (judge LLM — preferred over Groq when key is set) ────────────
+    gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
+    gemini_judge_model: str = Field(
+        default="gemini-1.5-flash", alias="GEMINI_JUDGE_MODEL"
+    )
+
+    @property
+    def use_gemini_judge(self) -> bool:
+        """True when a real Gemini API key is configured (not the placeholder)."""
+        key = self.gemini_api_key
+        return bool(key) and key not in ("", "YOUR_GEMINI_API_KEY_HERE")
+
     # ── Embeddings (Local HuggingFace) ───────────────────────────────────────
     embedding_model: str = Field(
         default="BAAI/bge-small-en-v1.5", alias="EMBEDDING_MODEL"

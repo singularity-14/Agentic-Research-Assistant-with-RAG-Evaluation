@@ -49,12 +49,35 @@ class HyDEQueryEnhancer:
     def _get_chain(self):
         """Lazily build the HyDE generation chain."""
         if self._chain is None:
-            llm = ChatGroq(
-                model=settings.groq_model,
-                api_key=settings.groq_api_key,
-                temperature=0.3,
-                max_tokens=300,
-            )
+            import os
+            from dotenv import load_dotenv
+            load_dotenv()
+            
+            if "NVIDIA_GLM_API_KEY" in os.environ:
+                from langchain_openai import ChatOpenAI
+                llm = ChatOpenAI(
+                    base_url="https://integrate.api.nvidia.com/v1",
+                    api_key=os.environ["NVIDIA_GLM_API_KEY"],
+                    model="mistralai/mistral-medium-3.5-128b",
+                    temperature=0.7,
+                    max_tokens=300,
+                    top_p=1.0,
+                )
+            elif settings.use_gemini_judge:
+                from langchain_google_genai import ChatGoogleGenerativeAI
+                os.environ["GOOGLE_API_KEY"] = settings.gemini_api_key
+                llm = ChatGoogleGenerativeAI(
+                    model=settings.gemini_judge_model,
+                    temperature=0.3,
+                    max_output_tokens=300,
+                )
+            else:
+                llm = ChatGroq(
+                    model=settings.groq_model,
+                    api_key=settings.groq_api_key,
+                    temperature=0.3,
+                    max_tokens=300,
+                )
             self._chain = HYDE_PROMPT | llm | StrOutputParser()
         return self._chain
 
@@ -72,13 +95,20 @@ class HyDEQueryEnhancer:
         if not self.enabled:
             return query
 
-        try:
-            chain = self._get_chain()
-            hypothetical_doc = chain.invoke({"query": query})
-            logger.debug(
-                f"HyDE generated ({len(hypothetical_doc)} chars) for: {query[:60]}..."
-            )
-            return hypothetical_doc
-        except Exception as exc:
-            logger.warning(f"HyDE generation failed, using original query: {exc}")
-            return query
+        import time
+        for attempt in range(3):
+            try:
+                time.sleep(0.1)  # Avoid rate limit and 503s
+                chain = self._get_chain()
+                hypothetical_doc = chain.invoke({"query": query})
+                logger.debug(
+                    f"HyDE generated ({len(hypothetical_doc)} chars) for: {query[:60]}..."
+                )
+                return hypothetical_doc
+            except Exception as exc:
+                if attempt == 2:
+                    logger.warning(f"HyDE generation failed after 3 attempts, using original query: {exc}")
+                    return query
+                else:
+                    logger.warning(f"HyDE generation failed (attempt {attempt+1}), retrying: {exc}")
+                    time.sleep(0.5)

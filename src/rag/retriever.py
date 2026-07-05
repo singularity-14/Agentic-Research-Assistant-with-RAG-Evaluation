@@ -16,7 +16,6 @@ from typing import Any, Dict, List, Optional, Tuple
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
-from langchain.retrievers import EnsembleRetriever
 from loguru import logger
 
 from src.config import settings
@@ -111,7 +110,7 @@ class HybridRetriever:
         """
         # 1. BM25 search
         bm25 = self._get_bm25()
-        bm25_results = bm25.get_relevant_documents(query)
+        bm25_results = bm25.invoke(query)
 
         # 2. Dense search
         dense_results = self._vs.similarity_search(query, k=self.top_k_retrieval)
@@ -169,6 +168,10 @@ class HybridRetriever:
         Returns:
             LangChain EnsembleRetriever (BM25 + FAISS, equal weights).
         """
+        # Lazy import: langchain.retrievers.__init__ eagerly loads
+        # ContextualCompressionRetriever which breaks on langchain_core>=0.3.60
+        # (langchain_core.memory was removed). Only import when actually needed.
+        from langchain.retrievers.ensemble import EnsembleRetriever  # noqa: PLC0415
         bm25 = self._get_bm25()
         dense = self._vs.as_retriever(k=self.top_k_retrieval)
         return EnsembleRetriever(

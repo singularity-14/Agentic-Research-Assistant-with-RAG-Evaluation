@@ -1,6 +1,8 @@
 <div align="center">
 
-# ⚛️ CERN Knowledge Navigator
+# ⚛️ Agentic Research Assistant with RAG Evaluation
+
+> **Note:** Due to model rate limit errors, the evaluation is currently configured to sample only 2 queries.
 
 **Production-grade RAG system over CERN/HEP scientific papers**
 
@@ -325,11 +327,11 @@ Run evaluation against the 50-question golden dataset:
 # Full evaluation (50 questions, ~15-20 min with Groq rate limits)
 python -m src.evaluation.ragas_runner
 
-# Quick CI subset (10 questions, ~3-5 min)
-python -m src.evaluation.ragas_runner --sample 10
+# Quick CI subset (2 questions, ~1 min)
+python -m src.evaluation.ragas_runner --sample 2
 
 # CI mode: exits with code 1 if faithfulness < 0.8
-python -m src.evaluation.ragas_runner --sample 10 --ci
+python -m src.evaluation.ragas_runner --sample 2 --ci
 ```
 
 ### Metrics

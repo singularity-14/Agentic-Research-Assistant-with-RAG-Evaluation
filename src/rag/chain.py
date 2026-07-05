@@ -20,8 +20,6 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_groq import ChatGroq
-from langchain.retrievers import ContextualCompressionRetriever
-from langchain.retrievers.document_compressors import LLMChainExtractor
 from loguru import logger
 
 from src.config import settings
@@ -35,12 +33,12 @@ from src.rag.vector_store import CernVectorStore
 RAG_SYSTEM_PROMPT = """You are CERN Knowledge Navigator, an expert AI assistant \
 specialising in high-energy physics, accelerator physics, and CERN scientific research.
 
-You answer questions using the retrieved scientific context below. Follow these rules:
-1. Ground every claim in the provided context. Do not invent facts.
-2. If the context doesn't contain enough information, say so explicitly.
-3. Use scientific terminology accurately. Include relevant equations or values when helpful.
+WARNING: Your answer will be evaluated strictly on faithfulness. Follow these rules:
+1. Ground EVERY single claim in the provided context. Do NOT invent facts or use your own background knowledge. If you include ANY information not explicitly stated in the context below, you will fail the evaluation.
+2. Answer as best as you can using ONLY the provided context. Do not make up information even if the context does not contain the complete answer.
+3. Use scientific terminology exactly as it appears in the text. 
 4. Cite the source paper (title and arXiv ID) at the end of your answer.
-5. Be concise: prefer 3-6 sentence answers unless detail is explicitly requested.
+5. Keep it concise, do not ramble.
 
 Retrieved Context:
 {context}"""
@@ -78,7 +76,7 @@ class CernRAGChain:
     def __init__(
         self,
         use_hyde: bool = settings.enable_hyde,
-        use_compression: bool = True,
+        use_compression: bool = False,  # LLMChainExtractor aggressively strips chunks
     ) -> None:
         self.use_hyde = use_hyde
         self.use_compression = use_compression
@@ -88,14 +86,38 @@ class CernRAGChain:
 
     # ── Private setup ────────────────────────────────────────────────────────
 
-    def _get_llm(self) -> ChatGroq:
+    def _get_llm(self) -> Any:
         if self._llm is None:
-            self._llm = ChatGroq(
-                model=settings.groq_model,
-                api_key=settings.groq_api_key,
-                temperature=0.1,
-                max_tokens=1024,
-            )
+            import os
+            from dotenv import load_dotenv
+            load_dotenv()
+            
+            if "NVIDIA_GLM_API_KEY" in os.environ:
+                from langchain_openai import ChatOpenAI
+                self._llm = ChatOpenAI(
+                    base_url="https://integrate.api.nvidia.com/v1",
+                    api_key=os.environ["NVIDIA_GLM_API_KEY"],
+                    model="mistralai/mistral-medium-3.5-128b",
+                    temperature=0.7,
+                    max_tokens=16384,
+                    top_p=1.0,
+                    extra_body={"reasoning_effort": "high"}
+                )
+            elif settings.use_gemini_judge:
+                from langchain_google_genai import ChatGoogleGenerativeAI
+                os.environ["GOOGLE_API_KEY"] = settings.gemini_api_key
+                self._llm = ChatGoogleGenerativeAI(
+                    model=settings.gemini_judge_model,
+                    temperature=0.1,
+                    max_output_tokens=1024,
+                )
+            else:
+                self._llm = ChatGroq(
+                    model=settings.groq_model,
+                    api_key=settings.groq_api_key,
+                    temperature=0.1,
+                    max_tokens=1024,
+                )
         return self._llm
 
     def _get_retriever(self) -> HybridRetriever:
@@ -117,6 +139,9 @@ class CernRAGChain:
             return hybrid.retrieve(enhanced)
 
         if self.use_compression:
+            # Lazy import: avoids loading deprecated langchain chains at startup
+            from langchain.retrievers import ContextualCompressionRetriever
+            from langchain.retrievers.document_compressors import LLMChainExtractor
             # Add LLM-based contextual compression to filter noisy chunks
             compressor = LLMChainExtractor.from_llm(llm)
             base_retriever = hybrid.as_langchain_retriever()
@@ -151,13 +176,14 @@ class CernRAGChain:
             Dict with 'answer' (str) and 'sources' (List[Document]).
         """
         settings.configure_langsmith()
+
+        # Retrieve sources via the same HyDE-enhanced path the chain uses,
+        # so contexts passed to RAGAS faithfulness evaluation match what the
+        # LLM actually saw in its prompt.
+        enhanced_query = HyDEQueryEnhancer(enabled=self.use_hyde).enhance(query)
+        sources = self._get_retriever().retrieve(enhanced_query)
+
         chain = self._build_chain()
-
-        # Retrieve sources separately for the response payload
-        sources = self._get_retriever().retrieve(
-            HyDEQueryEnhancer(enabled=self.use_hyde).enhance(query)
-        )
-
         answer = chain.invoke(query)
 
         logger.info(

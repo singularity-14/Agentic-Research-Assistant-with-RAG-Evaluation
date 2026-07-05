@@ -12,6 +12,10 @@ langchain-huggingface==0.1.2
 # ── LLM / Groq ───────────────────────────────────────────────
 groq==0.28.0
 
+# ── LLM / Gemini (used as RAGAS judge — high rate limits) ────
+langchain-google-genai>=2.0.0
+google-generativeai>=0.8.0
+
 # ── Embeddings / HuggingFace ─────────────────────────────────
 sentence-transformers==3.4.1
 transformers==4.51.3
