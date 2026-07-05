@@ -1,10 +1,7 @@
 name: RAGAS Evaluation CI
 
 on:
-  pull_request:
-    branches: [main, develop]
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   ragas-eval:
